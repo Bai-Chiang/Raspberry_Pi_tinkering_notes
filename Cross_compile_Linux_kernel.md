@@ -5,6 +5,7 @@ recommend using a debian virtual machine to cross-compiling Raspberry Pi Linux k
 But virtual machine is not as powerful as physical machine.
 In this document I will use [systemd-nspawn](https://wiki.archlinux.org/title/Systemd-nspawn), a chroot on steroids, to create a clean debian environment,
 and compiling linux kernel inside this container.
+This note assume building 64-bit kernel for raspberry pi 4, for other cases read the [official document](https://www.raspberrypi.org/documentation/computers/linux_kernel.html#cross-compiling-the-kernel) and make cooresponding changes.
 
 ___
 
@@ -38,27 +39,32 @@ ___
     sudo systemd-nspawn -bD ~/debian-systemd-nspawn 
     ```
     the `-b` option tell nspawn boot up the container. `-D` tells systemd-nspawn the directory.
-- Now you boot up the container. Login as `root` user, and your root password. Run some command like
+- Now you boot up the container. Login as `root` user, and your root password. 
+- Full system update
     ```
     apt update && apt full-upgrade
     ```
-    You can stop the container by runing command
-    ```
-    poweroff
-    ```
-    inside your container.
     
     If the terminal in the container could't recognize `backspace` or `tab` key, run
     ```
     echo 'export TERM=xterm-256color' >> ~/.bashrc
     ```
-    in the container, and re-login.
+    in the container, and re-login.  
     
+- [Install dependencies and 64-bit toolchain](https://www.raspberrypi.org/documentation/computers/linux_kernel.html#install-required-dependencies-and-toolchain)
+     ```
+    apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-arm64
+    ```
+    
+- Stop the container by runing command
+    ```
+    poweroff
+    ```
+    inside your container.
     If you want to force terminate your container, hold `Ctrl` and rapidly press `]`.
 
 ___
-
-The following section assume building 64-bit kernel for raspberry pi 4, for other cases read the [official document](https://www.raspberrypi.org/documentation/computers/linux_kernel.html#cross-compiling-the-kernel) and make cooresponding changes.
+## Configure and Recompile Kernel
 
 - Plug in your SD card (already has Raspberry Pi OS installed on it) and using `lsblk` find out its label, here let's say the two partitions on the SD card are `/dev/sda1` for root and `/dev/sda2` for boot.
 
@@ -68,16 +74,6 @@ The following section assume building 64-bit kernel for raspberry pi 4, for othe
 
     ```
     where `--bind=` option let the container access directory `/dev/sda1` and `/dev/sda2`.
-
-- Login as root then update
-    ```
-    apt update && apt full-upgrade
-    ```
-    
-- [Install dependencies and 64-bit toolchain](https://www.raspberrypi.org/documentation/computers/linux_kernel.html#install-required-dependencies-and-toolchain)
-     ```
-    apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-arm64
-    ```
     
 - [Get kernel source](https://www.raspberrypi.org/documentation/computers/linux_kernel.html#get-the-kernel-sources)
     ```
@@ -90,6 +86,7 @@ The following section assume building 64-bit kernel for raspberry pi 4, for othe
     KERNEL=kernel8
     make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
     ```
+
 - Config kernel using `menuconfig`
     ```
     make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
