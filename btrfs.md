@@ -80,7 +80,7 @@ ___
     ... root=PARTUUID=xxxxxxxx-02 rootfstype=btrfs ... fsck.repair=no
     ```
     where `xxxxxxxx-02` is the `PARTUUID` you get in previous step. Change `rootfstype=ext4` to `rootfstype=btrfs`,and
-    set `fsck.repair` to `no`.
+    set `fsck.repair` to `no`, see [`fsck.btrfs(8)`](https://man.archlinux.org/man/fsck.btrfs.8).
 
 - Edit `/mnt/root/etc/fstab`
     ```
@@ -91,7 +91,7 @@ ___
     PARTUUID=xxxxxxxx-02  /.snapshots  btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@snapshots	 0 0
     ...
     ```
-    note that the last tow collums should be `0` not `1`.
+    note that the last tow collums should be `0` not `1`, see [this](https://wiki.archlinux.org/title/Fstab#Usage)
 
 - Unmount SD card and poweroff
     ```
