@@ -5,6 +5,7 @@ recommend using a debian virtual machine to cross-compiling Raspberry Pi Linux k
 But virtual machine is not as powerful as physical machine.
 In this document I will use [systemd-nspawn](https://wiki.archlinux.org/title/Systemd-nspawn), a chroot on steroids, to create a clean debian environment,
 and compiling linux kernel inside this container.
+
 This note assume building 64-bit kernel for raspberry pi 4, for other cases read the [official document](https://www.raspberrypi.org/documentation/computers/linux_kernel.html#cross-compiling-the-kernel) and make cooresponding changes.
 
 ___
