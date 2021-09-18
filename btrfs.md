@@ -9,11 +9,11 @@ ___
 
 - Download and flash official Raspberry Pi OS to an SD card and boot up Raspberry Pi. Login as default user `pi` with password `raspberry`.
 - Update system and install package `btrfs-progs`
-  ````
-  sudo apt update && sudo apt full-upgrade 
-  sudo apt install btrfs-progs
-  reboot
-  ```
+    ````
+    sudo apt update && sudo apt full-upgrade 
+    sudo apt install btrfs-progs
+    reboot
+    ```
 - Login pi, Insert new SD card via usb adaptor, for example its device name is `/dev/sda`.
 
 - Run following commands as root user
@@ -100,6 +100,7 @@ ___
     poweroff
     ```
 
+___
 ## Cross-compile Linux Kernel
 
 - Set up cross-compile environment following the first part of [this](https://github.com/Bai-Qiang/Raspberry_Pi_tinkering_notes/blob/main/Cross_compile_Linux_kernel.md#create-a-clean-debian-environment) guide
@@ -109,6 +110,71 @@ ___
     ```
     sudo systemd-nspawn -bD ~/debian-systemd-nspawn --bind=/dev/sda1 --bind=/dev/sda2
     ```
-  
+- Clone the raspberry pi linux kernel source
+    ```
+    cd ~
+    git clone --depth=1 https://github.com/raspberrypi/linux
+    ```
+- Apply default configuration
+    ```
+    cd linux
+    KERNEL=kernel8
+    make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
+    ```
+- Config the kernel using `menuconfig`
+    ```
+    make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
+    ```
+- Active Btrfs in kernel
+    ```
+    File systems  --->
+        <*> Btrfs filesystem
+    ```
+    Make sure it's build into the kernel `<*>` not as a module `<M>`.
+- Save and exit.
+- Rebuild kernel
+    ```
+    make -j12 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
+    ```
+    `-jN` where I choose `N` as the number of logical cores which can be obtained from `nproc` command.
+    For example, `-j12` for a 6 core 12 threads processor.
+
+- Mount the SD card inside the container as follows
+    ```
+    mkdir /mnt/boot
+    mkdir /mnt/root
+    mount /dev/sda1 /mnt/boot
+    mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/sda2 /mnt/root
+    mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/sda2 /mnt/root/home
+    mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/sda2 /mnt/root/.snapshots
+    ```
+- Install kernel module to the SD card
+    ```
+    env PATH=$PATH make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- INSTALL_MOD_PATH=/mnt/root modules_install
+    ```
+- Copy the kernel and Device Tree to the SD card
+    ```
+    cp arch/arm64/boot/Image /mnt/boot/$KERNEL-btrfs.img
+    cp arch/arm64/boot/dts/broadcom/*.dtb /mnt/boot/
+    cp arch/arm64/boot/dts/overlays/*.dtb* /mnt/boot/overlays/
+    cp arch/arm64/boot/dts/overlays/README /mnt/boot/overlays/
+    ```
+- Edit the `/mnt/boot/config.txt` file let raspberry pi boot into new kernel
+    ```
+    kernel=kernel8-btrfs.img
+    ```
+    replace `kernel8-btrfs.img` with `$KERNEL-btrfs.img` in the previous step.
+    You could run `echo $KERNEL-btrfs.img` to get its name.
+- Umount the SD card
+    ```
+    umount -R /mnt
+    ```
+- Shut down the container
+    ```
+    poweroff
+    ```
+___
+- Insert the SD card in to raspberry pi and it should be able to boot from `btrfs` root filesystem.
+
 
 

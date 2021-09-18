@@ -71,7 +71,6 @@ ___
 - Star the container with this command
     ```
     sudo systemd-nspawn -bD ~/debian-systemd-nspawn --bind=/dev/sda1 --bind=/dev/sda2
-
     ```
     where `--bind=` option let the container access directory `/dev/sda1` and `/dev/sda2`.
     
