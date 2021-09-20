@@ -4,11 +4,11 @@
 The official Raspberry Pi OS uses ext4 as default root filesystem.
 [btrfs](https://wiki.archlinux.org/title/Btrfs) provides some very nice features like [snapshots](https://btrfs.wiki.kernel.org/index.php/SysadminGuide#Snapshots) backup and [transparent compression](https://wiki.archlinux.org/title/Btrfs#Compression) which could increase lifespan of SD card by reducing write data and may improve performance where IO bottle neck is more common when using Raspberry Pi 4b with SD card.
 
-The [`manjaro-arm-installer`](https://gitlab.manjaro.org/manjaro-arm/applications/manjaro-arm-installer/-/tree/master) provides `btrfs` option.
+The [`manjaro-arm-installer`](https://gitlab.manjaro.org/manjaro-arm/applications/manjaro-arm-installer/-/tree/master) provides `btrfs` option, and during the installation process you can choose install what desktop environments or window managers, it even support [`sway`](https://wiki.archlinux.org/title/Sway) window manager.
 
 ___
 # Raspberry Pi OS
-___
+
 ## Prepare btrfs SD card
 
 - Download and flash official Raspberry Pi OS to an SD card and boot up Raspberry Pi. Login as default user `pi` with password `raspberry`.
