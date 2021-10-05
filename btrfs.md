@@ -17,7 +17,7 @@ ___
   (don't need micro SD card addapter when copying the system to the micro SD card.)
   Login as default user `pi` with password `raspberry`.
 - Update system and install package `btrfs-progs`
-  ````
+  ```
   sudo apt update && sudo apt full-upgrade 
   sudo apt install btrfs-progs
   reboot
