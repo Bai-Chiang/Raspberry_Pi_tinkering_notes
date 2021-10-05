@@ -82,7 +82,7 @@ ___
 
 - Edit `/mnt/boot/cmdline.txt` 
   ```
-  ... root=PARTUUID=xxxxx-02 rootflags=subvol=/@ rootfstype=btrfs ... fsck.repair=no ...
+  root=PARTUUID=xxxxx-02 rootflags=subvol=/@ rootfstype=btrfs ... fsck.repair=no ...
   ```
   where `xxxxx` is the `PAATUUID` you get in previous step. Change `rootfstype=ext4` to `rootfstype=btrfs`,and
   set `fsck.repair` to `no`, see [`fsck.btrfs(8)`](https://man.archlinux.org/man/fsck.btrfs.8).
