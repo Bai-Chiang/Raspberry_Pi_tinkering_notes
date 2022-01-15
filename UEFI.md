@@ -27,4 +27,4 @@ Set up Raspberry Pi UEFI boot, so that we could use universal `aarch64` image to
 
 - disable the 3 GB RAM limit if linux kernel version 5.8 or later
 
-  In the UEFI settins: `Device Manager` → `Raspberry Pi Configuration` → `Advanced Settings`
+  In the UEFI settins: `Device Manager` → `Raspberry Pi Configuration` → `Advanced Settings` and set Limit RAM to 3 GB to <Disabled>
