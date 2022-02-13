@@ -34,19 +34,20 @@
   
   - partition the nvme device
     ```
-    sudo fdisk /dev/nvme0n1
-    ````
-
-    - Type o. Create new DOS partition table.
-    - Type n -> p -> 1 -> ENTER -> +512MiB. Create a 512MiB partition at front.
-    - Type t -> c . Set the first partition type to W95 FAT32 (LBA).
-    - Type n -> p -> 2 -> ENTER -> ENTER. Create the second partition for the remaining space.
-    - Type p. Check partition size and Types are correct.
-    - Type w. Write the partition table and exit.
-
-  - Create format disk
+    # parted /dev/mmcblk0
+    (parted) mklabel gpt
     ```
-    sudo mkfs.vfat /dev/nvme0n1p1
+    The patition scheme has 512MiB boot partition (also EFI partition), and remaining space as root partition.
+    ```
+    (parted) mkpart "EFI partition" fat32 1MiB 513MiB
+    (parted) set 1 esp on
+    (parted) mkpart "root partition" ext4 513MiB 100%
+    (parted) quit
+    ```
+
+  - Format disk
+    ```
+    sudo mkfs.fat -F32 /dev/nvme0n1p1
     sudo mkfs.ext4 /dev/nvme0n1p2
     ```
   - Mount disk
@@ -61,21 +62,22 @@
     ```
     # rsync -aAXHv --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found"} / /mnt
     ```
-  - update `/mnt/boot/cmdline.txt` 
+  - update root device in `/mnt/boot/cmdline.txt` 
     ```
-    root=/dev/nvme0n1p2 rootflags=subvol=/@ rootfstype=btrfs ... fsck.repair=no ...
+    root=/dev/nvme0n1p2
     ```
-  - update `/mnt/etc/fstab`
+    and `/mnt/etc/fstab`
     ```
     /dev/nvme0n1p1  /boot        vfat   defaults             0  0
     /dev/nvme0n1p2  /            ext4   defaults,noatime	   0  0
     ```
+    You can also use UUID instead, use command `lsblk -dno UUID /dev/nvme0n1p1` find UUID of the partition.
   - reboot
      ```
      umount -R /mnt
      poweroff
      ```
-     remove SD card and power on.
+     remove SD card and power on, now you should boot into the SSD.
 
 
 
