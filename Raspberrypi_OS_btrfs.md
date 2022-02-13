@@ -46,11 +46,11 @@ If you build kernel locally, when running `make` don't need `ARCH=xxx`.
 - Save and exit.
 - Rebuild kernel
   ```
-  make -j12 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
+  make -j4 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
   ```
   `-jN` where I choose `N` as the number of logical cores which can be obtained from `nproc` command.
-  For example, `-j12` for a 6 core 12 threads processor.
-
+  For example, `-j12` for a 6 core 12 threads processor, and `-j4` on raspberry pi.
+  
 - Mount the SD card inside the container as follows
   ```
   mkdir /mnt/boot
