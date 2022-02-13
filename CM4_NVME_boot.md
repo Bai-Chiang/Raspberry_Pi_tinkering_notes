@@ -34,3 +34,31 @@
 
 
 ## Copy system to nvme ssd
+
+- Flash a Raspberry pi OS to SD card, or using existing SD card. Insert both SD card and nvme to CM4, and boot. 
+  It should boot from the SD card, because we configured CM4 to try boot from SD card first.
+
+- I will use btrfs on the ssd, so we need to install `btrfs-progs` package.
+
+- Create GPT partition
+  ```
+  # parted /dev/nvme0n1
+  (parted) mklabel gpt
+  ```
+  The patition scheme follows [this](https://wiki.archlinux.org/title/Parted#UEFI/GPT_examples) example,
+  with 512MiB boot partition (also EFI partition), 8GiB swap partition and remaining space as root partition.
+  ```
+  (parted) mkpart "EFI system partition" fat32 0% 512MiB
+  (parted) set 1 esp on
+  (parted) mkpart "swap partition" linux-swap 512MiB 4.5GiB
+  (parted) mkpart "root partition" btrfs 8.5GiB 100%
+  (parted) quit
+  ```
+- Format the EFI partiton
+  ```
+  # mkfs.fat -F32 /dev/nvme0n1p1
+  ```
+- Create swap partition
+  ```
+  mkswap /dev/nvme0n1p2
+  ```
