@@ -4,7 +4,6 @@
 
 - The official Raspberry Pi OS uses ext4 as default root filesystem.
 
-- The [`manjaro-arm-installer`](https://gitlab.manjaro.org/manjaro-arm/applications/manjaro-arm-installer/-/tree/master) script provides `btrfs` option, and during the installation process you can choose different desktop environments or window managers.
 
 
 
@@ -24,86 +23,79 @@ ___
   ```
 - Login pi, insert mirco SD card, for example its device name is `/dev/mmcblk0`.
 
-- Run following commands as root user
+- Create GPT partition
   ```
-  sudo -i
+  # parted /dev/mmcblk0
+  (parted) mklabel gpt
   ```
-
-- Unmount SD card (because if using raspberry pi OS desktop version it would auto-mount USB dirve)
+  The patition scheme follows [this](https://wiki.archlinux.org/title/Parted#UEFI/GPT_examples) example,
+  with 512MiB boot partition (also EFI partition), 12GiB swap partition and remaining space as root partition.
   ```
-  umount /dev/mmcblk0*
+  (parted) mkpart "EFI system partition" fat32 0% 512MiB
+  (parted) set 1 esp on
+  (parted) mkpart "swap partition" linux-swap 512MiB 12.5GiB
+  (parted) mkpart "root partition" btrfs 12.5GiB 100%
+  (parted) quit
   ```
-
-- partition the SD card
+- Format the EFI partiton
   ```
-  fdisk /dev/mmcblk0
-  ````
-
-  - Type o. Create new DOS partition table.
-  - Type n -> p -> 1 -> ENTER -> +512MiB. Create a 512MiB partition at front.
-  - Type t -> c . Set the first partition type to W95 FAT32 (LBA).
-  - Type n -> p -> 2 -> ENTER -> ENTER. Create the second partition for the remaining space.
-  - Type p. Check partition size and Types are correct.
-  - Type w. Write the partition table and exit.
-
-- Create and mount FAT filesystem
+  # mkfs.fat -F32 /dev/mmcblk0p1
   ```
-  mkfs.vfat /dev/mmcblk0p1
-  mkdir -p /mnt/boot
-  mount /dev/mmcblk0p1 /mnt/boot
+- Create swap partition
+  ```
+  # mkswap /dev/mmcblk0p2
   ```
 - Create btrfs filesystem and subvolumes
   ```
-  mkfs.btrfs /dev/mmcblk0p2
-  mkdir /mnt/root
-  mount /dev/mmcblk0p2 /mnt/root
-  btrfs subvolume create /mnt/root/@
-  btrfs subvolume create /mnt/root/@home
-  mkdir /mnt/root/@/home
-  umount -R /mnt/root
+  # mkfs.btrfs /dev/mmcblk0p3
+  # mount /dev/mmcblk0p3 /mnt
+  # btrfs subvolume create /mnt/@
+  # btrfs subvolume create /mnt/@home
+  # btrfs subvolume create /mnt/@snapshots
+  # mkdir /mnt/@/home
+  # mkdir /mnt/@/boot
+  # mkdir /mnt/@/.snapshots
+  # umount -R /mnt
   ```
-
-- Mount btrfs filesystem
+  
+- Mount filesystem
   ```
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/mmcblk0p2 /mnt/root
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/mmcblk0p2 /mnt/root/home
+  # mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/mmcblk0p3 /mnt
+  # mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/mmcblk0p3 /mnt/home
+  # mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/mmcblk0p3 /mnt/.snapshots
+  # mount /dev/mmcblk0p1 /mnt/boot
   ```
 - system clone with [rsync](https://wiki.archlinux.org/title/Rsync#Full_system_backup).
-  **There is trailing slash "/" at the end of  `/boot/` but no trailing slash at the end of `/mnt/boot` and `/mnt/root`**
-  ```
-  rsync -aAXHv /boot/ /mnt/boot
-  rsync -aAXHv --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found","/boot/*"} / /mnt/root
-  ```
 
-- Get new root partition PARTUUID
+  **No trailing slash at the end of `/mnt`**
   ```
-  lsblk -dno PARTUUID /dev/mmcblk0p2
+  # rsync -aAXHv --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found"} / /mnt
   ```
 
 - Edit `/mnt/boot/cmdline.txt` 
   ```
-  root=PARTUUID=xxxxx-02 rootflags=subvol=/@ rootfstype=btrfs ... fsck.repair=no ...
+  root=UUID=xxxxxxx-xxxx rootflags=subvol=/@ rootfstype=btrfs ... fsck.repair=no ...
   ```
-  where `xxxxx` is the `PAATUUID` you get in previous step. Change `rootfstype=ext4` to `rootfstype=btrfs`,and
+  where `xxxxxxx-xxxx` is the `UUID` of root patition, you can get it using `lsblk -dno UUID /dev/mmcblk0p3`.
+  Add kernel parameter `rootflags=subvol=/@`.
+  Change `rootfstype=ext4` to `rootfstype=btrfs`,and
   set `fsck.repair` to `no`, see [`fsck.btrfs(8)`](https://man.archlinux.org/man/fsck.btrfs.8).
 
-- Edit `/mnt/root/etc/fstab`
+- Edit `/mnt/etc/fstab`
   ```
-  ...
-  UUID=xxxxx  /boot        vfat   defaults 0 0
-  UUID=xxxxx  /            btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@	         0 0
-  UUID=xxxxx  /home        btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@home	     0 0
-  ...
+  UUID=BOOT_UUID  /boot        vfat   defaults                                                                     0  0
+  UUID=ROOT_UUID  /            btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@	         0  0
+  UUID=ROOT_UUID  /home        btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@home	     0  0
+  UUID=ROOT_UUID  /.snapshots  btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@snapshots	 0  0
+  UUID=SWAP_UUID  none         swap   defaults                                                                     0  0
   ```
   Note that the last tow collums should be `0` not `1`, see [this](https://wiki.archlinux.org/title/Fstab#Usage)
-  For `/boot` partition, get UUID from `lsblk -dno UUID /dev/mmcblk0p1`,
-  root partition use `lsblk -dno UUID /dev/mmcblk0p2`.
+  Get `BOOT_UUID` from `lsblk -dno UUID /dev/mmcblk0p1`, and `lsblk -dno UUID /dev/mmcblk0p2` for `SWAP_UUID`, and `lsblk -dno UUID /dev/mmcblk0p3` for `ROOT_UUID`.
 
-- Unmount SD card and poweroff
+- poweroff
   ```
-  umount -R /mnt/boot
-  umount -R /mnt/root
-  poweroff
+  # umount -R /mnt
+  # poweroff
   ```
 
 ## Cross-compile Linux Kernel
