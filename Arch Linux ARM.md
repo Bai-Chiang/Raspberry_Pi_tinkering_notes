@@ -1,17 +1,54 @@
-# Arch Linux ARM
-(Arch Linux ARM does not boot from my CM4)
+# Arch Linux ARM on CM4 and boot from nvme ssd
 
 This part follows arch linux arm [installation guide](https://archlinuxarm.org/platforms/armv8/broadcom/raspberry-pi-4).
-Suppose the SD card device shown as `/dev/sdX`.
+
+
+- [update boot order](https://www.raspberrypi.com/documentation/computers/compute-module.html#cm4bootloader) on ubuntu PC
+  ```
+  sudo apt install git libusb-1.0-0-dev build-essential
+  git clone --depth=1 https://github.com/raspberrypi/usbboot
+  cd usbboot
+  make
+  ```
+  
+  Now we modify CM4 bootloader
+  ```
+  cd recovery
+  ```
+  edit `boot.conf`, set
+  ```
+  BOOT_ORDER=0xf561
+  ```
+  This let CM4 first try SD card, then NVME,then USB 2.0. See [this](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#raspberry-pi-4-bootloader-configuration) for more options.
+  
+  then run
+  ```
+  ./update-pieeprom.sh
+  sudo ../rpiboot -d . 
+  ```
+  Now connect raspberry pi CM4 to PC (make sure not boot CM4).
+  
+  Finally, flash bootloader (you may need to replug the CM4, if the script shows Waiting for BCM2835/6/7/2711...)
+  ```
+  cd ..
+  sudo ./rpiboot -d recovery
+  ```
+
+Flash a micro SD with official Raspberry pi OS image, and boot into it with nvme ssd in the m.2 slot.
 
 - All following command needs run as root user
   ```
   sudo -i
   ```
 
-- partition the SD card
+- Install packages
   ```
-  fdisk /dev/sdX
+  apt install btrfs-progs libarchive-tools
+  ```
+
+- partition the nvme device
+  ```
+  fdisk /dev/nvme0n1
   ````
 
   - Type o. Create new DOS partition table.
@@ -23,11 +60,11 @@ Suppose the SD card device shown as `/dev/sdX`.
 
 - Create FAT filesystem for /boot
   ```
-  mkfs.vfat /dev/sdX1
+  mkfs.vfat /dev/nvme0n1p1
   ```
 - Create btrfs filesystem and subvolumes
   ```
-  mkfs.btrfs /dev/sdX2
+  mkfs.btrfs /dev/nvme0n1p2
   mount /dev/sdX2 /mnt
   btrfs subvolume create /mnt/@
   btrfs subvolume create /mnt/@home
@@ -40,10 +77,10 @@ Suppose the SD card device shown as `/dev/sdX`.
 
 - Mount btrfs filesystem
   ```
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/sdX2 /mnt
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/sdX2 /mnt/home
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/sdX2 /mnt/.snapshots
-  mount /dev/sdx1 /mnt/boot
+  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/nvme0n1p2 /mnt
+  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/nvme0n1p2 /mnt/home
+  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/nvme0n1p2 /mnt/.snapshots
+  mount /dev/nvme0n1p1 /mnt/boot
   ```
 - Download and extract the root filesystem as **root** not via sudo.
   ```
@@ -66,7 +103,7 @@ Suppose the SD card device shown as `/dev/sdX`.
   ```
 
   note that the last tow collums should be `0` not `1`, see [this](https://wiki.archlinux.org/title/Fstab#Usage).
-  You can get UUID for `/dev/sdX1` by running this command `lsblk -dno UUID /dev/sdX1`, same for `/dev/sdX2`.
+  You can get UUID for `/dev/sdX1` by running this command `lsblk -dno UUID /dev/nvme0n1p1`, same for `/dev/nvme0n1p2`.
 
 - Edit `/mnt/boot/boot.txt`, change root UUID 
   ```
