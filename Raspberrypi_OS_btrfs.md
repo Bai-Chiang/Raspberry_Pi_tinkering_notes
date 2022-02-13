@@ -4,9 +4,9 @@ The official Raspberry Pi OS does not build btrfs into the kernel, to being able
 
 This note assume building 64-bit kernel for raspberry pi 4, for other cases read the [official document](https://www.raspberrypi.com/documentation/computers/linux_kernel.html#building) and make cooresponding changes.
 
+If you build kernel on the raspberry pi locally, you can skip this section.
 
-## Cross-compile Linux Kernel
-
+## Cross-compile environment
 - Set up cross-compile environment following the first part of [this](https://github.com/Bai-Qiang/Raspberry_Pi_tinkering_notes/blob/main/Cross_compile_Linux_kernel.md#create-a-clean-debian-environment) guide
   on your PC.
 - Plug in the SD card to your PC. Using `lsblk` find out its label, for example `/dev/sdX1` for boot partition and `/dev/sdX2` for root partition.
@@ -14,6 +14,9 @@ This note assume building 64-bit kernel for raspberry pi 4, for other cases read
   ```
   sudo systemd-nspawn -bD ~/debian-systemd-nspawn --bind=/dev/sdX1 --bind=/dev/sdX2
   ```
+  
+If you build kernel locally, when running `make` don't need `ARCH=xxx`.
+## Configure kernel
 - Clone the raspberry pi linux kernel source
   ```
   cd ~
@@ -84,7 +87,7 @@ This note assume building 64-bit kernel for raspberry pi 4, for other cases read
   ```
 
 ___
-- Disable swapfile
+Boot into btrfs system and disable swapfile
   ```
   sudo dphys-swapfile swapoff
   sudo systemctl disable dphys-swapfile.service
