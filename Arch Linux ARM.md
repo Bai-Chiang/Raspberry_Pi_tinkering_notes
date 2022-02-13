@@ -34,7 +34,7 @@
 - Create btrfs filesystem and subvolumes
   ```
   mkfs.btrfs /dev/nvme0n1p2
-  mount /dev/sdX2 /mnt
+  mount /dev/nvme0n1p2 /mnt
   btrfs subvolume create /mnt/@
   btrfs subvolume create /mnt/@home
   btrfs subvolume create /mnt/@snapshots
