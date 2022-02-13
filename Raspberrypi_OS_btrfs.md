@@ -1,105 +1,11 @@
-# Raspberry Pi btrfs setup
+# Raspberry Pi OS btrfs setup
 
-[btrfs](https://wiki.archlinux.org/title/Btrfs) provides some very nice features like [snapshots](https://btrfs.wiki.kernel.org/index.php/SysadminGuide#Snapshots) backup and [transparent compression](https://wiki.archlinux.org/title/Btrfs#Compression) which could increase lifespan of SD card by reducing write data and may improve performance where IO bottle neck is more common when using Raspberry Pi 4 with SD card.
+The official Raspberry Pi OS does not build btrfs into the kernel, to being able to use btrfs as root filesystem we need to recompile Linux kernel.
 
-- The official Raspberry Pi OS uses ext4 as default root filesystem.
+This note assume building 64-bit kernel for raspberry pi 4, for other cases read the [official document](https://www.raspberrypi.com/documentation/computers/linux_kernel.html#building) and make cooresponding changes.
 
-
-
-
-___
-# Raspberry Pi OS
-
-## Prepare btrfs SD card
-
-- Download and flash official Raspberry Pi OS to an USB drive and boot up Raspberry Pi from the USB.
-  (don't need micro SD card addapter when copying the system to the micro SD card.)
-  Login as default user `pi` with password `raspberry`.
-- Update system and install package `btrfs-progs`
-  ```
-  sudo apt update && sudo apt full-upgrade 
-  sudo apt install btrfs-progs
-  reboot
-  ```
-- Login pi, insert mirco SD card, for example its device name is `/dev/mmcblk0`.
-
-- Create GPT partition
-  ```
-  # parted /dev/mmcblk0
-  (parted) mklabel gpt
-  ```
-  The patition scheme follows [this](https://wiki.archlinux.org/title/Parted#UEFI/GPT_examples) example,
-  with 512MiB boot partition (also EFI partition), 12GiB swap partition and remaining space as root partition.
-  ```
-  (parted) mkpart "EFI system partition" fat32 0% 512MiB
-  (parted) set 1 esp on
-  (parted) mkpart "swap partition" linux-swap 512MiB 12.5GiB
-  (parted) mkpart "root partition" btrfs 12.5GiB 100%
-  (parted) quit
-  ```
-- Format the EFI partiton
-  ```
-  # mkfs.fat -F32 /dev/mmcblk0p1
-  ```
-- Create swap partition
-  ```
-  # mkswap /dev/mmcblk0p2
-  ```
-- Create btrfs filesystem and subvolumes
-  ```
-  # mkfs.btrfs /dev/mmcblk0p3
-  # mount /dev/mmcblk0p3 /mnt
-  # btrfs subvolume create /mnt/@
-  # btrfs subvolume create /mnt/@home
-  # btrfs subvolume create /mnt/@snapshots
-  # mkdir /mnt/@/home
-  # mkdir /mnt/@/boot
-  # mkdir /mnt/@/.snapshots
-  # umount -R /mnt
-  ```
-  
-- Mount filesystem
-  ```
-  # mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/mmcblk0p3 /mnt
-  # mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/mmcblk0p3 /mnt/home
-  # mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/mmcblk0p3 /mnt/.snapshots
-  # mount /dev/mmcblk0p1 /mnt/boot
-  ```
-- system clone with [rsync](https://wiki.archlinux.org/title/Rsync#Full_system_backup).
-
-  **No trailing slash at the end of `/mnt`**
-  ```
-  # rsync -aAXHv --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found"} / /mnt
-  ```
-
-- Edit `/mnt/boot/cmdline.txt` 
-  ```
-  root=UUID=xxxxxxx-xxxx rootflags=subvol=/@ rootfstype=btrfs ... fsck.repair=no ...
-  ```
-  where `xxxxxxx-xxxx` is the `UUID` of root patition, you can get it using `lsblk -dno UUID /dev/mmcblk0p3`.
-  Add kernel parameter `rootflags=subvol=/@`.
-  Change `rootfstype=ext4` to `rootfstype=btrfs`,and
-  set `fsck.repair` to `no`, see [`fsck.btrfs(8)`](https://man.archlinux.org/man/fsck.btrfs.8).
-
-- Edit `/mnt/etc/fstab`
-  ```
-  UUID=BOOT_UUID  /boot        vfat   defaults                                                                     0  0
-  UUID=ROOT_UUID  /            btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@	         0  0
-  UUID=ROOT_UUID  /home        btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@home	     0  0
-  UUID=ROOT_UUID  /.snapshots  btrfs  rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@snapshots	 0  0
-  UUID=SWAP_UUID  none         swap   defaults                                                                     0  0
-  ```
-  Note that the last tow collums should be `0` not `1`, see [this](https://wiki.archlinux.org/title/Fstab#Usage)
-  Get `BOOT_UUID` from `lsblk -dno UUID /dev/mmcblk0p1`, and `lsblk -dno UUID /dev/mmcblk0p2` for `SWAP_UUID`, and `lsblk -dno UUID /dev/mmcblk0p3` for `ROOT_UUID`.
-
-- poweroff
-  ```
-  # umount -R /mnt
-  # poweroff
-  ```
 
 ## Cross-compile Linux Kernel
-This section assume building 64-bit kernel for raspberry pi 4, for other cases read the [official document](https://www.raspberrypi.org/documentation/computers/linux_kernel.html#cross-compiling-the-kernel) and make cooresponding changes.
 
 - Set up cross-compile environment following the first part of [this](https://github.com/Bai-Qiang/Raspberry_Pi_tinkering_notes/blob/main/Cross_compile_Linux_kernel.md#create-a-clean-debian-environment) guide
   on your PC.
@@ -178,7 +84,6 @@ This section assume building 64-bit kernel for raspberry pi 4, for other cases r
   ```
 
 ___
-- Insert the SD card in to raspberry pi and it should be able to boot from `btrfs` root filesystem.
 - Disable swapfile
   ```
   sudo dphys-swapfile swapoff
