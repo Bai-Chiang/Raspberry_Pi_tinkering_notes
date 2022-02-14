@@ -71,7 +71,7 @@
     /dev/nvme0n1p1  /boot        vfat   defaults             0  0
     /dev/nvme0n1p2  /            ext4   defaults,noatime	   0  0
     ```
-    You can also use UUID instead, use command `lsblk -dno UUID /dev/nvme0n1p1` find UUID of the partition.
+
   - reboot
      ```
      umount -R /mnt
