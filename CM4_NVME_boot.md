@@ -34,7 +34,7 @@
   
   - partition the nvme device
     ```
-    # parted /dev/mmcblk0
+    # parted /dev/nvme0n1
     (parted) mklabel gpt
     ```
     The patition scheme has 512MiB boot partition (also EFI partition), and remaining space as root partition.
