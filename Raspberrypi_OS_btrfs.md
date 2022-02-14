@@ -1,4 +1,4 @@
-# Raspberry Pi OS btrfs on nvme ssd
+# Btrfs as root filesystem
 
 The official Raspberry Pi OS does not build btrfs into the kernel, it's build as a module.
 So we need to build a initramfs.
