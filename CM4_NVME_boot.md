@@ -68,7 +68,7 @@
     ```
     and `/mnt/etc/fstab`
     ```
-    /dev/nvme0n1p1  /boot        vfat   defaults             0  0
+    /dev/nvme0n1p1  /boot        vfat   defaults             0  2
     /dev/nvme0n1p2  /            ext4   defaults,noatime	   0  0
     ```
 
