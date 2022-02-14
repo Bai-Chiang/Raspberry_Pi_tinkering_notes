@@ -38,7 +38,7 @@ If you build kernel locally, when running `make` don't need `ARCH=xxx`.
       <*> Btrfs filesystem support
   ```
   Make sure it's build into the kernel `<*>` not as a module `<M>`.
-- Active initramfs support, for `root=UUID=xxx` in `cmdline.txt`
+- Active initramfs support, if using UUID in `cmdline.txt` specify root disk `root=UUID=xxx`.
   ```
   File systems  --->
       <*> Btrfs filesystem support
@@ -53,22 +53,12 @@ If you build kernel locally, when running `make` don't need `ARCH=xxx`.
   
 - Mount the SD card inside the container as follows
   ```
-  mkdir /mnt/boot
-  mkdir /mnt/root
+  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/sdX2 /mnt
   mount /dev/sdX1 /mnt/boot
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/sdX2 /mnt/root
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/sdX2 /mnt/root/home
   ```
-- Install kernel module to the SD card
-  ```
-  env PATH=$PATH make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- INSTALL_MOD_PATH=/mnt/root modules_install
-  ```
-- Copy the kernel and Device Tree to the SD card
+- Copy new kernel to the SD card
   ```
   cp arch/arm64/boot/Image /mnt/boot/$KERNEL-btrfs.img
-  cp arch/arm64/boot/dts/broadcom/*.dtb /mnt/boot/
-  cp arch/arm64/boot/dts/overlays/*.dtb* /mnt/boot/overlays/
-  cp arch/arm64/boot/dts/overlays/README /mnt/boot/overlays/
   ```
 - Edit the `/mnt/boot/config.txt` file let raspberry pi boot into new kernel
   ```
