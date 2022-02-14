@@ -2,8 +2,7 @@
 
 - [change boot order](https://github.com/Bai-Chiang/Raspberry_Pi_tinkering_notes/blob/main/CM4_NVME_boot.md)
 
-
-- Flash a micro SD with official Raspberry pi OS image, and boot into it with nvme ssd in the m.2 slot.
+- Flash a micro SD with official Raspberry pi OS image, and boot into the Raspberry OS on the SD card with nvme ssd pluged in the m.2 slot.
 
 - All following command needs run as root user
   ```
@@ -17,19 +16,20 @@
 
 - partition the nvme device
   ```
-  fdisk /dev/nvme0n1
-  ````
-
-  - Type o. Create new DOS partition table.
-  - Type n -> p -> 1 -> ENTER -> +512MiB. Create a 512MiB partition at front.
-  - Type t -> c . Set the first partition type to W95 FAT32 (LBA).
-  - Type n -> p -> 2 -> ENTER -> ENTER. Create the second partition for the remaining space.
-  - Type p. Check partition size and Types are correct.
-  - Type w. Write the partition table and exit.
+  # parted /dev/nvme0n1
+  (parted) mklabel gpt
+  ```
+  The patition scheme has 512MiB boot partition (also EFI partition), and remaining space as root partition.
+  ```
+  (parted) mkpart "EFI partition" fat32 1MiB 513MiB
+  (parted) set 1 esp on
+  (parted) mkpart "root partition" btrfs 513MiB 100%
+  (parted) quit
+  ```
 
 - Create FAT filesystem for /boot
   ```
-  mkfs.vfat /dev/nvme0n1p1
+  mkfs.fat -F32 /dev/nvme0n1p1
   ```
 - Create btrfs filesystem and subvolumes
   ```
@@ -51,6 +51,8 @@
   mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/nvme0n1p2 /mnt/.snapshots
   mount /dev/nvme0n1p1 /mnt/boot
   ```
+
+
 - Download and extract the root filesystem as **root** not via sudo.
   ```
   wget http://os.archlinuxarm.org/os/ArchLinuxARM-rpi-aarch64-latest.tar.gz
