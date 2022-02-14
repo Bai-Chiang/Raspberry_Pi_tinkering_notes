@@ -3,6 +3,13 @@
 The official Raspberry Pi OS does not build btrfs into the kernel, it's build as a module.
 So we need to build a initramfs.
 
+Here we first boot into the Raspberry Pi OS, parition our target disk `/dev/nvme0n1`, a NVME SSD (see [this](https://github.com/Bai-Chiang/Raspberry_Pi_tinkering_notes/blob/main/CM4_NVME_boot.md) tutorial set up NVME boot on CM4), in to two partitions.
+The first one is EFI partition, formatted as FAT32.
+Second partition will be formatted as btrfs.
+We then create btrfs subvolumes and mount them to `/mnt`.
+Finally, we use `rsync` clone current system into `/mnt`, like bootstrap installation.
+
+
 - Boot into Raspberry Pi OS disable swapfile
   ```
   sudo dphys-swapfile swapoff
@@ -28,7 +35,6 @@ So we need to build a initramfs.
   ```
   then reboot raspberry pi, check everything work correctly.
 
-- [set up nvme boot.](https://github.com/Bai-Chiang/Raspberry_Pi_tinkering_notes/blob/main/CM4_NVME_boot.md)
 
 - partition and format the nvme device
   ```
