@@ -1,83 +1,95 @@
-# Raspberry Pi OS btrfs setup
+# Raspberry Pi OS btrfs on nvme ssd
 
-The official Raspberry Pi OS does not build btrfs into the kernel, to being able to use btrfs as root filesystem we need to recompile Linux kernel.
+The official Raspberry Pi OS does not build btrfs into the kernel, it's build as a module.
+So we need to build a initramfs.
 
-This note assume building 64-bit kernel for raspberry pi 4, for other cases read the [official document](https://www.raspberrypi.com/documentation/computers/linux_kernel.html#building) and make cooresponding changes.
-
-If you build kernel on the raspberry pi locally, you can skip this section.
-
-## Cross-compile environment
-- Set up cross-compile environment following the first part of [this](https://github.com/Bai-Qiang/Raspberry_Pi_tinkering_notes/blob/main/Cross_compile_Linux_kernel.md#create-a-clean-debian-environment) guide
-  on your PC.
-- Plug in the SD card to your PC. Using `lsblk` find out its label, for example `/dev/sdX1` for boot partition and `/dev/sdX2` for root partition.
-- Boot up the debian container
-  ```
-  sudo systemd-nspawn -bD ~/debian-systemd-nspawn --bind=/dev/sdX1 --bind=/dev/sdX2
-  ```
-  
-If you build kernel locally, when running `make` don't need `ARCH=xxx`.
-## Configure kernel
-- Clone the raspberry pi linux kernel source
-  ```
-  cd ~
-  git clone --depth=1 https://github.com/raspberrypi/linux
-  ```
-- Apply default configuration
-  ```
-  cd linux
-  KERNEL=kernel8
-  make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- bcm2711_defconfig
-  ```
-- Config the kernel using `menuconfig`
-  ```
-  make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
-  ```
-- Active Btrfs in kernel
-  ```
-  File systems  --->
-      <*> Btrfs filesystem support
-  ```
-  Make sure it's build into the kernel `<*>` not as a module `<M>`.
-- Save and exit.
-- Rebuild kernel
-  ```
-  make -j4 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image modules dtbs
-  ```
-  `-jN` where I choose `N` as the number of logical cores which can be obtained from `nproc` command.
-  For example, `-j12` for a 6 core 12 threads processor, and `-j4` on raspberry pi.
-  
-- Mount the SD card inside the container as follows
-  ```
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/sdX2 /mnt
-  mount /dev/sdX1 /mnt/boot
-  ```
-- Copy new kernel to the SD card
-  ```
-  cp arch/arm64/boot/Image /mnt/boot/$KERNEL-btrfs.img
-  ```
-- Edit the `/mnt/boot/config.txt` file let raspberry pi boot into new kernel
-  ```
-  kernel=kernel8-btrfs.img
-  ```
-  replace `kernel8-btrfs.img` with `$KERNEL-btrfs.img` in the previous step.
-  You could run `echo $KERNEL-btrfs.img` to get its name.
-- Umount the SD card
-  ```
-  umount -R /mnt/boot
-  umount -R /mnt/root
-  ```
-- Shut down the container
-  ```
-  poweroff
-  ```
-
-___
-Boot into btrfs system and disable swapfile
+- Boot into Raspberry Pi OS disable swapfile
   ```
   sudo dphys-swapfile swapoff
   sudo systemctl disable dphys-swapfile.service
   ```
   If swapfile is needed following [this](https://wiki.archlinux.org/title/Btrfs#Swap_file) guide.
+  
+- Prepare initramfs
 
+  Install necessary packages
+  ```
+  # apt install btrfs-progs initramfs-tools
+  ```
+  add `btrfs` module to `/etc/initramfs-tools/modules`
+  
+  build initramfs
+  ```
+  # mkinitramfs -o /boot/initramfs-btrfs.gz
+  ```
+  add this line to `/boot/config.txt`
+  ```
+  initramfs initramfs-btrfs.gz
+  ```
+  then reboot raspberry pi, check everything work correctly.
+
+- [set up nvme boot.](https://github.com/Bai-Chiang/Raspberry_Pi_tinkering_notes/blob/main/CM4_NVME_boot.md)
+
+- partition and format the nvme device
+  ```
+  # parted /dev/nvme0n1
+  (parted) mklabel gpt
+  ```
+  The patition scheme has 512MiB boot partition (also EFI partition), and remaining space as root partition.
+  ```
+  (parted) mkpart "EFI partition" fat32 1MiB 513MiB
+  (parted) set 1 esp on
+  (parted) mkpart "root partition" btrfs 513MiB 100%
+  (parted) quit
+  ```
+
+  Create FAT filesystem for /boot
+  ```
+  mkfs.fat -F32 /dev/nvme0n1p1
+  ```
+  Create btrfs filesystem and subvolumes
+  ```
+  mkfs.btrfs /dev/nvme0n1p2
+  mount /dev/nvme0n1p2 /mnt
+  btrfs subvolume create /mnt/@
+  btrfs subvolume create /mnt/@home
+  btrfs subvolume create /mnt/@snapshots
+  mkdir /mnt/@/home
+  mkdir /mnt/@/boot
+  mkdir /mnt/@/.snapshots
+  umount -R /mnt
+  ```
+
+  Mount btrfs filesystem
+  ```
+  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/nvme0n1p2 /mnt
+  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/nvme0n1p2 /mnt/home
+  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/nvme0n1p2 /mnt/.snapshots
+  mount /dev/nvme0n1p1 /mnt/boot
+  ```
+- system clone with [rsync](https://wiki.archlinux.org/title/Rsync#Full_system_backup).
+
+  **No trailing slash at the end of `/mnt`**
+  ```
+  # rsync -aAXHv --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/media/*","/lost+found"} / /mnt
+  ```
+- update root device in `/mnt/boot/cmdline.txt`  add `rootflags=subvol=/@`, change `rootfstype=ext4` and `fsck.repair=yes` to `rootfstype=btrfs` and `fsck.repair=no`
+  ```
+  ... root=/dev/nvme0n1p2 rootflags=subvol=/@ 
+  ```
+  and `/mnt/etc/fstab`
+  ```
+  /dev/nvme0n1p1  /boot        vfat   defaults             0  2
+  /dev/nvme0n1p2  /            btrfs   rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@            0       0
+  /dev/nvme0n1p2  /home        btrfs   rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@home        0       0
+  /dev/nvme0n1p2  /.snapshots  btrfs   rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@snapshots   0       0
+  ```
+
+- unplug SD card and reboot
+  ```
+  umount -R /mnt
+  poweroff
+  ```
+  remove SD card and power on, now you should boot into the SSD.
 
 
