@@ -38,11 +38,6 @@ If you build kernel locally, when running `make` don't need `ARCH=xxx`.
       <*> Btrfs filesystem support
   ```
   Make sure it's build into the kernel `<*>` not as a module `<M>`.
-- Active initramfs support, if using UUID in `cmdline.txt` specify root disk `root=UUID=xxx`.
-  ```
-  File systems  --->
-      <*> Btrfs filesystem support
-  ```
 - Save and exit.
 - Rebuild kernel
   ```
