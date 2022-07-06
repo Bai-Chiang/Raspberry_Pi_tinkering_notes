@@ -38,17 +38,21 @@
   btrfs subvolume create /mnt/@
   btrfs subvolume create /mnt/@home
   btrfs subvolume create /mnt/@snapshots
-  mkdir /mnt/@/home
-  mkdir /mnt/@/boot
-  mkdir /mnt/@/.snapshots
+  btrfs subvolume create /mnt/@var_log
+  btrfs subvolume create /mnt/@pacman_pkgs
+  mkdir /mnt/@/{boot,home,.snapshots}
+  mkdir -p /mnt/@/var/log
+  mkdir -p /mnt/@/var/cache/pacman/pkg
   umount -R /mnt
   ```
 
 - Mount btrfs filesystem
   ```
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/nvme0n1p2 /mnt
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/nvme0n1p2 /mnt/home
-  mount -o ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/nvme0n1p2 /mnt/.snapshots
+  mount -o noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@ /dev/nvme0n1p2 /mnt
+  mount -o noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@home /dev/nvme0n1p2 /mnt/home
+  mount -o noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@snapshots /dev/nvme0n1p2 /mnt/.snapshots
+  mount -o noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@var_log /dev/nvme0n1p2 /mnt/var/log
+  mount -o noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=@pacman_pkgs /dev/nvme0n1p2 /mnt/var/cache/pacman/pkg
   mount /dev/nvme0n1p1 /mnt/boot
   ```
 
@@ -68,13 +72,15 @@
   ```
   # <file system>                            <dir>        <type>  <options>                                                                     <dump>  <pass>
   UUID=xxxx-xxxx                             /boot        vfat    defaults                                                                      0       0
-  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /            btrfs   rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@            0       0
-  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /home        btrfs   rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@home        0       0
-  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /.snapshots  btrfs   rw,ssd,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@snapshots   0       0
+  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /            btrfs   rw,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@                0       0
+  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /home        btrfs   rw,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@home            0       0
+  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /.snapshots  btrfs   rw,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@snapshots       0       0
+  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /var/log     btrfs   rw,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@var_log         0       0
+  UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  /var/cache/pacman/pkg  btrfs   rw,noatime,compress=zstd:1,space_cache=v2,autodefrag,subvol=/@pacman_pkgs       0       0
   ```
 
   note that the last tow collums should be `0` not `1`, see [this](https://wiki.archlinux.org/title/Fstab#Usage).
-  You can get UUID for `/dev/sdX1` by running this command `lsblk -dno UUID /dev/nvme0n1p1`, same for `/dev/nvme0n1p2`.
+  You can get UUID for `/dev/nvme0n1p1` by running this command `lsblk -dno UUID /dev/nvme0n1p1`, same for `/dev/nvme0n1p2`.
 
 - Edit `/mnt/boot/boot.txt`, change root UUID 
   ```
