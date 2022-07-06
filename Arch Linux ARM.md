@@ -1,5 +1,7 @@
 # Arch Linux ARM on CM4 and boot from nvme ssd
 
+NOT working, see https://archlinuxarm.org/forum/viewtopic.php?f=65&t=15893&p=69001&hilit=btrfs#p69001
+
 - [change boot order](https://github.com/Bai-Chiang/Raspberry_Pi_tinkering_notes/blob/main/CM4_NVME_boot.md)
 
 - Flash a micro SD with official Raspberry pi OS image, and boot into the Raspberry OS on the SD card with nvme ssd pluged in the m.2 slot.
