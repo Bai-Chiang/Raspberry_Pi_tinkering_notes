@@ -1,6 +1,6 @@
-# Arch Linux ARM on CM4 and boot from nvme ssd
+# Arch Linux ARM on CM4 and boot from nvme ssd (NOT works)
 
-NOT working, see https://archlinuxarm.org/forum/viewtopic.php?f=65&t=15893&p=69001&hilit=btrfs#p69001
+Arch Linux ARM cannot boot on my CM4, even using default ext4 as rootfs following [this](https://archlinuxarm.org/platforms/armv8/broadcom/raspberry-pi-4) guide.
 
 - [change boot order](https://github.com/Bai-Chiang/Raspberry_Pi_tinkering_notes/blob/main/CM4_NVME_boot.md)
 
