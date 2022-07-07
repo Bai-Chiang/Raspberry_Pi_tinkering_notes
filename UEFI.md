@@ -23,7 +23,7 @@ Set up Raspberry Pi UEFI boot, so that we could use universal `aarch64` image to
   ```
   dd if=/path/to/image.iso of=/dev/sdx conv=sync status=progress oflag=direct  bs=8M
   ```
-- Insert the micro sd card and the USB boot drive to the raspberry pi
+- Insert the micro sd card and the USB boot drive to the raspberry pi, it should boot into UEFI, then you can select to boot from usb live iso like PC.
 
 - disable the 3 GB RAM limit if linux kernel version 5.8 or later
 
