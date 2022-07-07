@@ -24,6 +24,9 @@ Finally, we use `rsync` clone current system into `/mnt`, like bootstrap install
   # apt install btrfs-progs initramfs-tools
   ```
   add `btrfs` module to `/etc/initramfs-tools/modules`
+  ```
+  echo "btrfs" >> /etc/initramfs-tools/modules
+  ```
   
   build initramfs
   ```
