@@ -19,7 +19,7 @@ Set up Raspberry Pi UEFI boot, so that we could use universal `aarch64` image to
   # umount /mnt
   ```
   umplug sd card.
-- Download iso and create USB boot drive as usual
+- Download iso (like the [debian](https://www.debian.org/distrib/netinst) arm64 iso) and create USB boot drive as usual
   ```
   dd if=/path/to/image.iso of=/dev/sdx conv=sync status=progress oflag=direct  bs=8M
   ```
